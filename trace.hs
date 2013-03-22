@@ -14,10 +14,7 @@ import System.Exit
 import System.Console.GetOpt
 import Data.Maybe (fromMaybe)
 import ProgressTree
-
-parseFile          :: String -> IO (Either ParseError [ProgressTree])
-parseFile fileName = catch (readFile fileName >>= (\contents -> return $ parse procedures contents (B.pack contents)))
-                           (\_ -> return $ Left $ newErrorMessage (UnExpect ": file cannot be read or found.") (newPos fileName 0 0)) 
+import TraceHelpers
 
 test = "PROCEDURE lol : END PROCEDURE."
 
@@ -29,7 +26,7 @@ main = do
                 print "What's the filename, boss?" 
                 getLine
         else return (args !! 1)
-    parsedFile <- parseFile filename
+    parsedFile <- followIncludes (Include filename)
     writeFile (filename ++ ".trace") (show parsedFile)
     --print $ show parsedFile
 

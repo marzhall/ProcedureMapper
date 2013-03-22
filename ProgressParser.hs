@@ -86,10 +86,29 @@ endProcedure = do
 
 functionCall :: Parser ProgressTree
 functionCall = do
-   functionName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}(): " <?> "the name of the procedure being defined")
+   functionName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}(),.\t\n: " <?> "the name of the procedure being defined")
    char '('
-   manyTill (try functionCall <|> junkword) ( try $ char ')')
-   return $ FunctionCall functionName
+   contextFunctions <- manyTill (try functionCall <|> try include <|> junkword) ( try $ char ')')
+   return $ FunctionCall functionName (nullRemoved contextFunctions)
+
+endFunction :: Parser ProgressTree
+endFunction = do
+   string "END" >> many1 space >> string "FUNCTION"
+   try $ char '.'
+   return Null
+
+function :: Parser ProgressTree
+function = do
+   string "FUNCTION"
+   many1 space
+   functionName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}{: " <?> "the name of the function being defined")
+   many1 space
+   string "RETURNS"
+   many1 space
+   manyTill (anyChar) (try $ char ':')
+   many1 space
+   procedureCalls <- manyTill (try call <|> try functionCall <|> try randomStar <|> try randomSlash <|> try comment <|> try quoted <|> try preprocessor <|> try include <|> junkword <?> "internal procedure code") (try endFunction)
+   return $ FunctionDef functionName (nullRemoved procedureCalls)
 
 procedure :: Parser ProgressTree
 procedure = do
@@ -147,6 +166,6 @@ preprocessor = do
 procedures :: Parser [ProgressTree]
 procedures = do
     spaces
-    allProcedures <- many (try procedure <|> try randomStar <|> try randomSlash <|> try comment <|> try quoted <|> try preprocessor <|> try include <|> junkword <?> "a new procedure, definition, or top-level code. You should never get this error; if you do, I done goofed")
+    allProcedures <- many (try procedure <|> try function <|> try randomStar <|> try randomSlash <|> try comment <|> try quoted <|> try preprocessor <|> try include <|> junkword <?> "a new procedure, definition, or top-level code. You should never get this error; if you do, I done goofed")
     eof
     return $ nullRemoved allProcedures
