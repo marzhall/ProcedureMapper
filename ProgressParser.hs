@@ -75,12 +75,12 @@ junkword = do
 
 junk :: Parser ProgressTree
 junk = do
-    noneOf " /{\'\"PRE" <?> "special characters or the beginning of commands important to us"
+    noneOf " /{\'\"pre" <?> "special characters or the beginning of commands important to us"
     return Null
 
 endProcedure :: Parser ProgressTree
 endProcedure = do
-   string "END" >> many1 space >> string "PROCEDURE"
+   string "end" >> many1 space >> string "procedure"
    try $ char '.'
    return Null
 
@@ -93,17 +93,30 @@ functionCall = do
 
 endFunction :: Parser ProgressTree
 endFunction = do
-   string "END" >> many1 space >> string "FUNCTION"
+   string "end" >> many1 space >> string "function"
    try $ char '.'
+   return Null
+
+functionForward :: Parser ProgressTree
+functionForward = do
+   string "function"
+   many1 space
+   functionName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}{: " <?> "the name of the function being defined")
+   many1 space
+   string "returns"
+   many1 space
+   manyTill (anyChar) (try $ char ')')
+   spaces
+   string "forward"
    return Null
 
 function :: Parser ProgressTree
 function = do
-   string "FUNCTION"
+   string "function"
    many1 space
    functionName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}{: " <?> "the name of the function being defined")
    many1 space
-   string "RETURNS"
+   string "returns"
    many1 space
    manyTill (anyChar) (try $ char ':')
    many1 space
@@ -112,7 +125,7 @@ function = do
 
 procedure :: Parser ProgressTree
 procedure = do
-   string "PROCEDURE"
+   string "procedure"
    many1 space
    procedureName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}{: " <?> "the name of the procedure being defined")
    spaces
@@ -123,7 +136,7 @@ procedure = do
 
 call :: Parser ProgressTree
 call = do
-   string "RUN"
+   string "run"
    many1 space
    procName <- many1 (noneOf "\\/?*\"'><(|&}{. " <?> "the name of the procedure being called")
    return $ ProcedureCall procName
@@ -166,6 +179,6 @@ preprocessor = do
 procedures :: Parser [ProgressTree]
 procedures = do
     spaces
-    allProcedures <- many (try procedure <|> try function <|> try randomStar <|> try randomSlash <|> try comment <|> try quoted <|> try preprocessor <|> try include <|> junkword <?> "a new procedure, definition, or top-level code. You should never get this error; if you do, I done goofed")
+    allProcedures <- many (try procedure <|> try functionForward <|> try function <|> try randomStar <|> try randomSlash <|> try comment <|> try quoted <|> try preprocessor <|> try include <|> junkword <?> "a new procedure, definition, or top-level code. You should never get this error; if you do, I done goofed")
     eof
     return $ nullRemoved allProcedures

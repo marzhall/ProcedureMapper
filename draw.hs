@@ -15,7 +15,21 @@ import System.Console.GetOpt
 import Data.Maybe (fromMaybe)
 import ProgressTree
 
-test = "PROCEDURE lol : END PROCEDURE."
+addSpaces     :: String -> Int -> String
+addSpaces spaces 0 = spaces
+addSpaces spaces indent = addSpaces (' ':spaces) (indent - 1)
+
+childTrees                              :: Int -> CompletedTree -> [Char]
+childTrees indent (CompletedBlock name code) = "\n" ++ addSpaces "" indent
+    ++ name
+    ++ (concatMap (childTrees (indent + 4)) code)
+childTrees indent (RecursiveProcedureCall name) = "\n" ++ addSpaces "" indent ++ name ++ " (Recursive)"
+childTrees indent (RecursiveFunctionCall name) = "\n" ++ addSpaces "" indent ++ name ++ " (Recursive)"
+childTrees indent (CodeNotFound name) = "\n" ++ addSpaces "" indent ++ name ++ "*"
+childTrees indent other = "\n" ++ addSpaces "" indent ++ (show other)
+
+printTree      :: CompletedTree -> String
+printTree item = childTrees 0 item
 
 main = do
    args <- getArgs 
@@ -25,15 +39,13 @@ main = do
             print "What's the filename, boss?" 
             getLine
       else return (args !! 1)
-   parsedFile <- followIncludes (Include filename)
-   writeFile (filename ++ ".trace") (show parsedFile)
-
-   pTree <- catch (readFile (filename ++ ".trace" >>= (\contents -> return $ read contents))
+   pTree <- catch (readFile (filename ++ ".trace") >>= (\contents -> return $ read contents))
                   (\_ -> do
-                     print "I don't see the file. Have you run 'trace.exe' on it, and is it named <filename>.[p|i|cls].trace?")
-
+                     print "I don't see a '.trace' file with that name. Have you run the 'trace' program on your file, and is there a file named <filename>.[p|i|cls].trace in your directory?"
+                     System.Exit.exitWith $ ExitSuccess)
    forever $ do
       print "Which procedure/function?" 
       toDraw <- getLine
-      if (member toDraw (makeMap pTree)) then
-         drawTree toDraw (makeMap pTree)
+      writeFile (toDraw ++ "." ++ filename ++ ".drawn") (tail $ printTree $ drawnTree toDraw pTree)
+      where 
+         drawnTree x n = completeTree x (makeMap n) []
