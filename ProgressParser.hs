@@ -88,8 +88,7 @@ functionCall :: Parser ProgressTree
 functionCall = do
    functionName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}(),.\t\n: " <?> "the name of the procedure being defined")
    char '('
-   contextFunctions <- manyTill (try functionCall <|> try include <|> junkword) ( try $ char ')')
-   return $ FunctionCall functionName (nullRemoved contextFunctions)
+   return $ FunctionCall functionName
 
 endFunction :: Parser ProgressTree
 endFunction = do
@@ -103,7 +102,8 @@ functionForward = do
    many1 space
    functionName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}{: " <?> "the name of the function being defined")
    many1 space
-   string "returns"
+   string "return"
+   optional $ try $ char 's'
    many1 space
    manyTill (anyChar) (try $ char ')')
    spaces
@@ -116,7 +116,8 @@ function = do
    many1 space
    functionName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}{: " <?> "the name of the function being defined")
    many1 space
-   string "returns"
+   string "return"
+   optional $ try $ char 's'
    many1 space
    manyTill (anyChar) (try $ char ':')
    many1 space

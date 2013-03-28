@@ -10,14 +10,14 @@ data ProgressTree = Include String
                   | ProcedureDef String [ProgressTree]
                   | ProcedureCall String
                   | FunctionDef String [ProgressTree]
-                  | FunctionCall String [ProgressTree]
+                  | FunctionCall String
                   | FileNotFound String
                   | Null
                   deriving (Show, Read, Eq)
 
 data CompletedTree = CompletedBlock String [CompletedTree]
                    | CodeNotFound String
-                   | CompletedFunctionCall String [CompletedTree]
+                   | CompletedFunctionCall String
                    | RecursiveProcedureCall String
                    | RecursiveFunctionCall String
                    | IncludeCall String
@@ -34,7 +34,7 @@ helperIncludes (first:rest) included = case first of
    Include _ -> helperIncludes rest (first:included)
    ProcedureDef _ children -> (helperIncludes rest included) ++ (helperIncludes children [])
    FunctionDef _ children -> (helperIncludes rest included) ++ (helperIncludes children [])
-   FunctionCall _ children -> (helperIncludes rest included) ++ (helperIncludes children [])
+   FunctionCall _ -> (helperIncludes rest included)
    _ -> helperIncludes rest included
 
 makeMap       :: [ProgressTree] -> M.Map String [ProgressTree]
@@ -56,9 +56,9 @@ completeCode knownBlocks parentBlocks toComplete = case toComplete of
          RecursiveProcedureCall name
       else
          completeTree name knownBlocks parentBlocks
-   FunctionCall name _ -> if (elem name parentBlocks) then
+   FunctionCall name -> if (elem name parentBlocks) then
          RecursiveFunctionCall name
       else
-         completeTree name knownBlocks parentBlocks
+         (completeTree name knownBlocks parentBlocks)
    Include name -> IncludeCall name
    _ -> NullComplete
