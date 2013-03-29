@@ -15,18 +15,27 @@ import System.Console.GetOpt
 import Data.Maybe (fromMaybe)
 import ProgressTree
 import TraceHelpers
+import ConfigParser
 
 test = "PROCEDURE lol : END PROCEDURE."
 
 main = do
-    args <- getArgs 
-    let askUser = (>=) 1 (length args)
-    filename <- if askUser 
-        then do
-                print "What's the filename, boss?" 
-                getLine
-        else return (args !! 1)
-    parsedFile <- followIncludes (Include filename)
-    writeFile (filename ++ ".trace") (show parsedFile)
-    --print $ show parsedFile
+   args <- getArgs 
+   configFile <- catch (readFile "draw.rc")
+                       (return $ return "")
+   let myConfig = if (configFile == "") then
+            Config [] []
+         else
+            case (parse config "configFile" (B.pack configFile)) of
+               Right conf -> conf
+               Left err -> Config [] []
+   let askUser = (>=) 1 (length args)
+   filename <- if askUser 
+      then do
+         print "What's the filename, boss?" 
+         getLine
+      else return (args !! 1)
+   parsedFile <- (mapM followIncludes $ [Include filename] ++ (D.map (\x -> Include x) (linkedFiles myConfig))) >>= (\x -> return $ concat x)
+   writeFile (filename ++ ".trace") (show parsedFile)
+   --print $ show parsedFile
 

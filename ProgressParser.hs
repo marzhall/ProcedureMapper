@@ -87,6 +87,7 @@ endProcedure = do
 functionCall :: Parser ProgressTree
 functionCall = do
    functionName <- many1 (alphaNum <|> noneOf "\\/?*\"'><|&}(),.\t\n: " <?> "the name of the procedure being defined")
+   spaces
    char '('
    return $ FunctionCall functionName
 
